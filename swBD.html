@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MACHINE 24 // SWARIT PROTOCOL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --void:#0a0a0a;
+  --gunmetal:#24282b;
+  --gunmetal-lt:#343a3e;
+  --steel:#484f54;
+  --steel-lt:#6b7378;
+  --rust:#b5502e;
+  --copper:#a8672f;
+  --yellow:#d9a520;
+  --crimson:#8c1c1c;
+  --crimson-bright:#c92a2a;
+  --paper:#c9c5ba;
+  --f-display:'Bebas Neue',sans-serif;
+  --f-ui:'Rajdhani',sans-serif;
+  --f-mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{
+  background:var(--void);
+  color:var(--paper);
+  font-family:var(--f-ui);
+  overflow-x:hidden;
+  cursor:none;
+  width:100%;
+  min-height:100%;
+}
+::selection{background:var(--rust);color:var(--void);}
+a{color:inherit;text-decoration:none;}
+button{font-family:inherit;background:none;border:none;color:inherit;}
+
+/* metal noise texture layer, reused everywhere */
+.grain{
+  position:fixed;inset:0;pointer-events:none;z-index:9990;opacity:.05;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.vignette{
+  position:fixed;inset:0;pointer-events:none;z-index:9989;
+  box-shadow:inset 0 0 18vw 4vw rgba(0,0,0,.85);
+}
+.scanline{
+  position:fixed;inset:0;pointer-events:none;z-index:9991;opacity:.04;
+  background:repeating-linear-gradient(0deg,#000 0px,#000 1px,transparent 2px,transparent 3px);
+}
+
+/* ============ CUSTOM CURSOR (welding torch) ============ */
+#torch{
+  position:fixed;top:0;left:0;width:34px;height:34px;pointer-events:none;z-index:10001;
+  transform:translate(-4px,-30px);
+  transition:transform .05s linear;
+}
+#torch svg{width:100%;height:100%;filter:drop-shadow(0 0 6px rgba(255,140,50,.6));}
+.spark{
+  position:fixed;width:4px;height:4px;border-radius:0;background:var(--yellow);
+  pointer-events:none;z-index:10000;box-shadow:0 0 6px 1px var(--rust);
+}
+
+/* ============ BOOT SCREEN ============ */
+#boot{
+  position:fixed;inset:0;background:var(--void);z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;
+}
+#boot .power-ring{
+  width:130px;height:130px;border-radius:50%;
+  border:3px solid var(--steel);
+  display:flex;align-items:center;justify-content:center;
+  cursor:none;position:relative;
+  transition:border-color .2s;
+}
+#boot .power-ring:hover{border-color:var(--rust);}
+#boot .power-ring::before{
+  content:'';position:absolute;inset:-10px;border-radius:50%;
+  border:1px dashed var(--gunmetal-lt);
+  pointer-events:none;
+}
+#boot .power-btn{
+  width:70px;height:70px;border-radius:50%;background:var(--gunmetal);
+  border:2px solid var(--steel-lt);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--f-mono);font-size:10px;letter-spacing:2px;color:var(--yellow);
+}
+#boot .boot-label{
+  margin-top:34px;font-family:var(--f-mono);font-size:12px;letter-spacing:4px;color:var(--steel-lt);
+}
+#boot .boot-label .blink{animation:blink 1.2s steps(1) infinite;}
+@keyframes blink{50%{opacity:0;}}
+
+#boot-sequence{
+  position:fixed;inset:0;background:var(--void);z-index:9998;display:none;
+  flex-direction:column;align-items:flex-start;justify-content:center;
+  padding:6vw;font-family:var(--f-mono);font-size:clamp(11px,1.6vw,16px);color:var(--yellow);
+  letter-spacing:1px;
+}
+#boot-sequence div{opacity:0;margin-bottom:6px;}
+#boot-sequence .ok{color:#5c9c5c;}
+#boot-sequence .warn{color:var(--crimson-bright);}
+
+#doors{
+  position:fixed;inset:0;z-index:9997;display:none;pointer-events:none;
+}
+.door{
+  position:absolute;top:0;bottom:0;width:50%;
+  background:
+    linear-gradient(90deg,rgba(0,0,0,.5),transparent 6%,transparent 94%,rgba(0,0,0,.5)),
+    repeating-linear-gradient(90deg,#1c1f21 0px,#1c1f21 38px,#141617 39px,#141617 40px),
+    linear-gradient(180deg,#2c3033,#151717 60%,#0c0d0e);
+  box-shadow:inset 0 0 60px rgba(0,0,0,.6);
+}
+.door.left{left:0;border-right:4px solid #0a0a0a;}
+.door.right{right:0;border-left:4px solid #0a0a0a;}
+.door .rivets{
+  position:absolute;top:0;bottom:0;width:100%;
+  background-image:radial-gradient(circle,#55595c 0 2px,transparent 3px);
+  background-size:42px 60px;
+  opacity:.5;
+}
+
+/* ============ HERO / TITLE ============ */
+#site{display:none;}
+#home{
+  min-height:100vh;position:relative;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;
+  background:
+    radial-gradient(ellipse at 50% 20%,rgba(181,80,46,.08),transparent 60%),
+    linear-gradient(180deg,#0d0e0f,#0a0a0a 40%,#0a0a0a);
+  padding:0 6vw;
+}
+.plate-frame{
+  border:2px solid var(--steel);
+  padding:clamp(24px,5vw,60px) clamp(20px,6vw,80px);
+  position:relative;
+  background:linear-gradient(160deg,rgba(255,255,255,.02),transparent 40%);
+}
+.plate-frame::before,.plate-frame::after,
+.plate-frame .corner-tl,.plate-frame .corner-br{
+  content:'';position:absolute;width:14px;height:14px;border:2px solid var(--rust);
+}
+.plate-frame::before{top:-2px;left:-2px;border-right:none;border-bottom:none;}
+.plate-frame::after{bottom:-2px;right:-2px;border-left:none;border-top:none;}
+.eyebrow{
+  font-family:var(--f-mono);font-size:clamp(10px,1.1vw,13px);letter-spacing:6px;
+  color:var(--steel-lt);margin-bottom:18px;
+}
+.eyebrow .dot{color:var(--rust);}
+h1.title{
+  font-family:var(--f-display);
+  font-size:clamp(48px,11vw,150px);
+  line-height:.92;
+  letter-spacing:2px;
+  color:#8b8f92;
+  text-shadow:
+    0 1px 0 #3d4247,
+    0 2px 3px rgba(0,0,0,.8),
+    0 0 40px rgba(181,80,46,.15);
+  position:relative;
+}
+h1.title .spark-letter{position:relative;display:inline-block;}
+.subtitle{
+  margin-top:22px;font-family:var(--f-ui);font-weight:600;font-size:clamp(14px,1.6vw,20px);
+  color:var(--rust);letter-spacing:3px;text-transform:uppercase;
+}
+.desc{
+  margin-top:26px;max-width:560px;color:var(--steel-lt);font-size:15px;line-height:1.7;
+}
+.scroll-cue{
+  margin-top:56px;font-family:var(--f-mono);font-size:11px;color:var(--steel-lt);letter-spacing:3px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.scroll-cue .bar{width:1px;height:40px;background:linear-gradient(var(--rust),transparent);animation:scrollpulse 1.8s ease-in-out infinite;}
+@keyframes scrollpulse{0%,100%{opacity:.2;}50%{opacity:1;}}
+
+/* gauge cluster behind title, decorative */
+.gauge-deco{
+  position:absolute;width:120px;height:120px;border-radius:50%;
+  border:2px solid var(--gunmetal-lt);opacity:.5;
+}
+.gauge-deco.g1{top:8%;left:6%;}
+.gauge-deco.g2{bottom:10%;right:7%;width:80px;height:80px;}
+@media(max-width:700px){.gauge-deco{display:none;}}
+
+/* ============ CONTROL PANEL / LEVER NAV ============ */
+#control-panel{
+  position:fixed;left:0;top:0;bottom:0;width:96px;z-index:500;
+  background:linear-gradient(180deg,#1a1c1e,#111213);
+  border-right:3px solid #050505;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  box-shadow:4px 0 20px rgba(0,0,0,.5);
+}
+#control-panel .brand{
+  position:absolute;top:22px;left:50%;transform:translateX(-50%);
+  font-family:var(--f-mono);font-size:9px;color:var(--steel-lt);letter-spacing:2px;
+  writing-mode:vertical-rl;text-orientation:mixed;
+}
+.lever{
+  width:64px;height:76px;position:relative;cursor:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
+}
+.lever .slot{
+  width:10px;height:56px;background:#050505;border-radius:5px;
+  box-shadow:inset 0 0 6px #000;position:relative;
+}
+.lever .handle{
+  position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:22px;height:30px;border-radius:4px;
+  background:linear-gradient(180deg,#5a6166,#2e3336);
+  border:1px solid #191b1c;
+  box-shadow:0 3px 6px rgba(0,0,0,.6);
+  transition:bottom .25s cubic-bezier(.5,0,.5,1);
+}
+.lever.active .handle{bottom:26px;background:linear-gradient(180deg,var(--rust),#7a3a20);}
+.lever .lever-label{
+  margin-top:8px;font-family:var(--f-mono);font-size:8px;letter-spacing:1px;color:var(--steel-lt);
+  text-align:center;line-height:1.3;
+}
+.lever.active .lever-label{color:var(--yellow);}
+.lever .lamp{
+  width:6px;height:6px;border-radius:50%;background:#3a1010;margin-bottom:4px;
+  box-shadow:0 0 3px #000;
+}
+.lever.active .lamp{background:var(--crimson-bright);box-shadow:0 0 8px var(--crimson-bright);}
+
+/* mobile bottom bar version */
+@media(max-width:900px){
+  #control-panel{
+    top:auto;bottom:0;left:0;right:0;width:100%;height:74px;
+    flex-direction:row;border-right:none;border-top:3px solid #050505;
+    justify-content:space-evenly;padding:0 6px;
+  }
+  #control-panel .brand{display:none;}
+  .lever{width:auto;height:56px;flex:1;}
+  .lever .slot{height:34px;}
+  .lever .handle{width:18px;height:20px;}
+  .lever.active .handle{bottom:14px;}
+  .lever .lever-label{font-size:7px;}
+  main{padding-left:0 !important;padding-bottom:74px;}
+}
+@media(min-width:901px){
+  main{padding-left:96px;}
+}
+
+/* ============ SECTIONS GENERIC ============ */
+.section{
+  min-height:100vh;padding:110px 8vw 100px;position:relative;
+}
+.section-head{margin-bottom:60px;max-width:760px;}
+.section-tag{
+  font-family:var(--f-mono);font-size:12px;letter-spacing:5px;color:var(--rust);margin-bottom:14px;
+}
+.section-title{
+  font-family:var(--f-display);font-size:clamp(36px,6vw,74px);color:#9a9ea1;letter-spacing:1px;
+  text-shadow:0 2px 0 #050505;
+}
+.section-sub{margin-top:16px;color:var(--steel-lt);font-size:15px;line-height:1.7;max-width:560px;}
+
+#home,#timeline,#arsenal,#memories,#final,#the-terminal{display:none;}
+#home.visible,#timeline.visible,#arsenal.visible,#memories.visible,#final.visible{display:block;}
+
+/* ============ TIMELINE / ASSEMBLY LINE ============ */
+.belt-wrap{position:relative;padding:40px 0 60px;}
+.belt-track{
+  position:relative;height:6px;background:#0d0d0d;border-radius:0;
+  box-shadow:inset 0 1px 2px #000;
+  background-image:repeating-linear-gradient(90deg,#3a3d3f 0 24px,#151617 24px 30px);
+  background-size:60px 100%;
+  animation:beltmove 3s linear infinite;
+}
+@keyframes beltmove{from{background-position:0 0;}to{background-position:-60px 0;}}
+.crate-row{
+  display:flex;gap:30px;overflow-x:auto;padding:36px 4px 30px;scroll-snap-type:x proximity;
+}
+.crate-row::-webkit-scrollbar{height:8px;}
+.crate-row::-webkit-scrollbar-thumb{background:var(--steel);}
+.crate{
+  flex:0 0 220px;height:230px;scroll-snap-align:start;
+  background:linear-gradient(160deg,#2a2d2f,#1a1c1d 60%);
+  border:2px solid #0e0f10;position:relative;cursor:none;
+  display:flex;flex-direction:column;justify-content:space-between;padding:18px;
+  transition:transform .2s, border-color .2s;
+}
+.crate:hover{transform:translateY(-6px);border-color:var(--rust);}
+.crate::before{
+  content:'';position:absolute;inset:8px;border:1px dashed #40454850;pointer-events:none;
+}
+.crate .crate-year{font-family:var(--f-mono);font-size:11px;color:var(--yellow);letter-spacing:2px;}
+.crate .crate-tag{
+  align-self:flex-start;font-family:var(--f-mono);font-size:9px;letter-spacing:2px;
+  color:var(--void);background:var(--rust);padding:3px 8px;
+}
+.crate .crate-title{font-family:var(--f-display);font-size:26px;color:var(--paper);letter-spacing:1px;line-height:1.05;}
+.crate .crate-open{font-family:var(--f-mono);font-size:10px;color:var(--steel-lt);letter-spacing:2px;}
+.crate .bolt{position:absolute;width:8px;height:8px;border-radius:50%;background:#111;box-shadow:inset 0 0 2px #000, 0 0 0 1px #444;}
+.crate .bolt.tl{top:6px;left:6px;} .crate .bolt.tr{top:6px;right:6px;}
+.crate .bolt.bl{bottom:6px;left:6px;} .crate .bolt.br{bottom:6px;right:6px;}
+
+/* ============ ARSENAL / GAUGES ============ */
+.gauge-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:36px;
+}
+.gauge-card{
+  background:linear-gradient(160deg,#26292b,#1a1c1d);
+  border:1px solid #0e0f10;padding:26px 20px 20px;text-align:center;
+  position:relative;
+}
+.gauge-svg{width:130px;height:130px;margin:0 auto;}
+.gauge-name{
+  margin-top:12px;font-family:var(--f-ui);font-weight:700;font-size:13px;letter-spacing:2px;color:var(--paper);
+}
+.gauge-value{font-family:var(--f-mono);font-size:12px;color:var(--rust);margin-top:4px;}
+
+/* ============ MEMORY VAULT / LOCKERS ============ */
+.locker-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:26px;
+}
+.locker{
+  height:270px;background:linear-gradient(160deg,#2b2e30,#18191a);
+  border:2px solid #0d0e0f;position:relative;cursor:none;overflow:hidden;
+}
+.locker .locker-face{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:transform .6s cubic-bezier(.7,0,.3,1);transform-origin:left center;
+  background:linear-gradient(160deg,#2b2e30,#18191a);
+  border-right:2px solid #0a0a0a;
+}
+.locker.open .locker-face{transform:rotateY(-108deg);}
+.locker .lock-dial{
+  width:44px;height:44px;border-radius:50%;border:3px solid var(--steel-lt);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .6s;
+}
+.locker.open .lock-dial{transform:rotate(260deg);}
+.locker .lock-dial::after{content:'';width:3px;height:16px;background:var(--rust);}
+.locker .locker-id{margin-top:14px;font-family:var(--f-mono);font-size:11px;color:var(--steel-lt);letter-spacing:2px;}
+.locker .locker-num{font-family:var(--f-display);font-size:40px;color:#6d7377;margin-top:6px;}
+.locker-content{
+  position:absolute;inset:0;padding:20px;display:flex;flex-direction:column;justify-content:center;gap:10px;
+  background:linear-gradient(160deg,#1c1e1f,#111213);
+}
+.locker-content .lc-tag{font-family:var(--f-mono);font-size:10px;color:var(--yellow);letter-spacing:2px;}
+.locker-content .lc-title{font-family:var(--f-display);font-size:22px;color:var(--paper);}
+.locker-content .lc-text{font-family:var(--f-mono);font-size:12px;color:#a9a9a4;line-height:1.6;min-height:60px;}
+
+/* ============ FINAL MESSAGE ============ */
+#final{display:none;}
+.final-plate{
+  max-width:720px;margin:0 auto;text-align:center;padding:60px 5vw;
+  border:2px solid var(--steel);position:relative;
+}
+.final-plate .section-tag{justify-content:center;display:flex;}
+.final-message{
+  font-family:var(--f-display);font-size:clamp(30px,5vw,54px);color:var(--paper);line-height:1.15;margin:20px 0;
+}
+.final-sign{font-family:var(--f-mono);font-size:13px;color:var(--steel-lt);letter-spacing:3px;margin-top:30px;}
+
+/* ============ FOOTER SPEC PLATE ============ */
+footer{
+  border-top:3px solid #050505;padding:50px 8vw 40px;
+  background:linear-gradient(180deg,#111213,#0a0a0a);
+}
+.spec-plate{
+  max-width:720px;border:2px solid var(--steel);padding:26px 30px;position:relative;
+  background:linear-gradient(160deg,rgba(255,255,255,.02),transparent);
+}
+.spec-title{font-family:var(--f-mono);font-size:11px;letter-spacing:4px;color:var(--steel-lt);margin-bottom:16px;}
+.spec-row{
+  display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:12px;
+  padding:8px 0;border-bottom:1px dashed #2a2d2f;color:var(--paper);
+}
+.spec-row:last-child{border-bottom:none;}
+.spec-row span:first-child{color:var(--steel-lt);letter-spacing:1px;}
+.spec-row span:last-child{color:var(--rust);}
+.foot-note{margin-top:24px;font-family:var(--f-mono);font-size:10px;color:#4a4e50;letter-spacing:1px;}
+
+/* ============ TERMINAL ============ */
+#term-toggle{
+  position:fixed;right:20px;bottom:20px;z-index:600;
+  width:52px;height:52px;background:#141516;border:2px solid var(--steel);
+  display:flex;align-items:center;justify-content:center;cursor:none;
+}
+#term-toggle svg{width:22px;height:22px;}
+@media(max-width:900px){#term-toggle{bottom:90px;}}
+#the-terminal{
+  position:fixed;z-index:700;right:20px;bottom:84px;width:min(440px,88vw);height:340px;
+  background:#0b0d0c;border:2px solid var(--yellow);box-shadow:0 20px 50px rgba(0,0,0,.7);
+  display:none;flex-direction:column;
+}
+#the-terminal.open{display:flex;}
+.term-bar{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 12px;background:#141613;font-family:var(--f-mono);font-size:10px;letter-spacing:2px;color:var(--yellow);
+  border-bottom:1px solid #262a24;
+}
+.term-close{cursor:none;color:var(--steel-lt);font-size:14px;}
+#term-log{flex:1;overflow-y:auto;padding:12px 14px;font-family:var(--f-mono);font-size:12px;color:#93c98f;line-height:1.6;}
+#term-log .cmd-line{color:var(--paper);}
+#term-log .resp{color:#8ec2ff;margin-bottom:6px;white-space:pre-wrap;}
+#term-log .err{color:var(--crimson-bright);}
+.term-input-row{display:flex;align-items:center;border-top:1px solid #262a24;padding:8px 12px;gap:6px;}
+.term-input-row span{color:var(--yellow);font-family:var(--f-mono);font-size:12px;}
+#term-input{
+  flex:1;background:transparent;border:none;outline:none;color:var(--paper);
+  font-family:var(--f-mono);font-size:12px;
+}
+
+/* ============ MODALS ============ */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:800;
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.open{display:flex;}
+.modal-box{
+  max-width:520px;width:100%;background:linear-gradient(160deg,#25282a,#17181a);
+  border:2px solid var(--rust);padding:34px 30px;position:relative;
+}
+.modal-box .m-tag{font-family:var(--f-mono);font-size:11px;color:var(--yellow);letter-spacing:2px;}
+.modal-box .m-title{font-family:var(--f-display);font-size:32px;color:var(--paper);margin:10px 0 16px;}
+.modal-box .m-text{font-family:var(--f-mono);font-size:13px;color:#b7b3a8;line-height:1.7;}
+.modal-close{
+  position:absolute;top:14px;right:14px;width:28px;height:28px;
+  border:1px solid var(--steel-lt);color:var(--steel-lt);cursor:none;
+  display:flex;align-items:center;justify-content:center;font-family:var(--f-mono);
+}
+
+/* ============ WARNING / SIREN OVERLAY (easter egg) ============ */
+#siren-overlay{
+  position:fixed;inset:0;z-index:9500;pointer-events:none;display:none;
+  background:radial-gradient(circle,rgba(140,28,28,.35),transparent 70%);
+}
+#siren-overlay.active{display:block;animation:sirenflash .5s steps(1) infinite;}
+@keyframes sirenflash{50%{background:radial-gradient(circle,rgba(140,28,28,.05),transparent 70%);}}
+
+/* overdrive mode (konami) */
+body.overdrive .lever .handle{transition-duration:.06s;}
+body.overdrive #home{animation:overdriveflicker 2.5s ease-in-out;}
+@keyframes overdriveflicker{0%,100%{filter:none;}45%{filter:hue-rotate(30deg) brightness(1.3);}}
+.toast{
+  position:fixed;top:24px;left:50%;transform:translateX(-50%);
+  background:#141516;border:1px solid var(--yellow);color:var(--yellow);
+  font-family:var(--f-mono);font-size:12px;letter-spacing:2px;padding:12px 20px;z-index:9600;
+  opacity:0;pointer-events:none;
+}
+
+/* focus visibility for accessibility */
+a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--yellow);outline-offset:2px;}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001s !important;transition-duration:.001s !important;}
+}
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+<div class="scanline"></div>
+<div class="vignette"></div>
+<div id="torch"><svg viewBox="0 0 24 24" fill="none"><path d="M3 21L10 14" stroke="#8a8f93" stroke-width="2" stroke-linecap="round"/><path d="M9 15L14 10L18 14L13 19L9 15Z" fill="#4a4e50" stroke="#8a8f93" stroke-width="1"/><path d="M17 6C17 6 21 4 22 8C23 12 18 11 18 11" fill="none" stroke="#b5502e" stroke-width="1.5"/><circle cx="19" cy="7" r="2" fill="#d9a520"/></svg></div>
+<div id="siren-overlay"></div>
+<div class="toast" id="toast"></div>
+
+<!-- BOOT -->
+<div id="boot">
+  <div class="power-ring">
+    <button class="power-btn" id="power-btn" aria-label="Initiate system">ENGAGE</button>
+  </div>
+  <div class="boot-label">PRESS TO INITIATE SYSTEM<span class="blink">_</span></div>
+</div>
+
+<div id="boot-sequence">
+  <div>&gt; INITIALIZING...</div>
+  <div class="ok">&gt; POWER GRID ......... ONLINE</div>
+  <div class="ok">&gt; HYDRAULIC SYSTEM ... READY</div>
+  <div class="ok">&gt; ENGINE STATUS ...... STABLE</div>
+  <div class="warn">&gt; SUBJECT DETECTED ... SWARIT</div>
+  <div class="ok">&gt; ACCESS LEVEL ....... AUTHORIZED</div>
+</div>
+
+<div id="doors">
+  <div class="door left"><div class="rivets"></div></div>
+  <div class="door right"><div class="rivets"></div></div>
+</div>
+
+<!-- MAIN SITE -->
+<div id="site">
+<nav id="control-panel">
+  <div class="brand">SWARIT // MACHINE 24</div>
+  <div class="lever active" data-target="home">
+    <div class="lamp"></div><div class="slot"><div class="handle"></div></div>
+    <div class="lever-label">HOME</div>
+  </div>
+  <div class="lever" data-target="timeline">
+    <div class="lamp"></div><div class="slot"><div class="handle"></div></div>
+    <div class="lever-label">TIMELINE</div>
+  </div>
+  <div class="lever" data-target="arsenal">
+    <div class="lamp"></div><div class="slot"><div class="handle"></div></div>
+    <div class="lever-label">ARSENAL</div>
+  </div>
+  <div class="lever" data-target="memories">
+    <div class="lamp"></div><div class="slot"><div class="handle"></div></div>
+    <div class="lever-label">MEMORIES</div>
+  </div>
+  <div class="lever" data-target="final">
+    <div class="lamp"></div><div class="slot"><div class="handle"></div></div>
+    <div class="lever-label">FINAL<br>MESSAGE</div>
+  </div>
+</nav>
+
+<main>
+  <!-- HOME -->
+  <section id="home" class="section visible">
+    <div class="gauge-deco g1"></div>
+    <div class="gauge-deco g2"></div>
+    <div class="plate-frame">
+      <div class="eyebrow"><span class="dot">●</span>&nbsp; UNIT DESIGNATION: SWARIT &nbsp;<span class="dot">●</span></div>
+      <h1 class="title" id="main-title">HAPPY<br>BIRTHDAY,<br>SWARIT</h1>
+      <div class="subtitle">MANUFACTURED FOR GREATNESS</div>
+      <p class="desc">Deep beneath the surface, one machine has run longer, louder, and harder than any other on the floor. Today we open the archive, run full diagnostics, and confirm what the whole facility already knows — this unit does not quit, does not rust, and does not get replaced.</p>
+      <div class="scroll-cue"><div class="bar"></div>PULL A LEVER TO PROCEED</div>
+    </div>
+  </section>
+
+  <!-- TIMELINE -->
+  <section id="timeline" class="section">
+    <div class="section-head">
+      <div class="section-tag">// ASSEMBLY LINE</div>
+      <div class="section-title">PRODUCTION TIMELINE</div>
+      <p class="section-sub">Every year on the line is logged, crated, and sealed. Click a crate to break the seal.</p>
+    </div>
+    <div class="belt-wrap">
+      <div class="crate-row" id="crate-row"></div>
+      <div class="belt-track"></div>
+    </div>
+  </section>
+
+  <!-- ARSENAL -->
+  <section id="arsenal" class="section">
+    <div class="section-head">
+      <div class="section-tag">// UNIT DIAGNOSTICS</div>
+      <div class="section-title">ARSENAL READOUT</div>
+      <p class="section-sub">Full mechanical profile of the unit, measured under load. Needles don't lie.</p>
+    </div>
+    <div class="gauge-grid" id="gauge-grid"></div>
+  </section>
+
+  <!-- MEMORIES -->
+  <section id="memories" class="section">
+    <div class="section-head">
+      <div class="section-tag">// RESTRICTED ARCHIVE</div>
+      <div class="section-title">MEMORY VAULT</div>
+      <p class="section-sub">Clearance granted. Rotate a dial to break the locker seal.</p>
+    </div>
+    <div class="locker-grid" id="locker-grid"></div>
+  </section>
+
+  <!-- FINAL -->
+  <section id="final" class="section">
+    <div class="final-plate">
+      <div class="section-tag">// TRANSMISSION</div>
+      <div class="final-message">EVERY MACHINE ON THIS FLOOR<br>WAS BUILT TO BE REPLACED.<br>YOU WEREN'T.</div>
+      <p class="section-sub" style="margin:0 auto;">Happy birthday, Swarit. Keep running hot, keep running loud, and never let them shut you down.</p>
+      <div class="final-sign">— SIGNED, THE ENGINEERING TEAM</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="spec-plate">
+    <div class="spec-title">MACHINE SPECIFICATIONS</div>
+    <div class="spec-row"><span>DESIGNATION</span><span>SWARIT</span></div>
+    <div class="spec-row"><span>MANUFACTURING DATE</span><span id="spec-date">[ SET BIRTH DATE ]</span></div>
+    <div class="spec-row"><span>CURRENT STATUS</span><span>LEGENDARY</span></div>
+    <div class="spec-row"><span>SYSTEM INTEGRITY</span><span>100%</span></div>
+    <div class="spec-row"><span>MISSION</span><span>KEEP WINNING</span></div>
+  </div>
+  <div class="foot-note">MACHINE 24 FACILITY // UNAUTHORIZED REPLICATION PROHIBITED // EST. TODAY</div>
+</footer>
+
+<button id="term-toggle" aria-label="Open terminal"><svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="0" stroke="#d9a520" stroke-width="1.5"/><path d="M6 9L10 12L6 15" stroke="#d9a520" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="17" y2="15" stroke="#d9a520" stroke-width="1.5"/></svg></button>
+<div id="the-terminal">
+  <div class="term-bar"><span>SECURE TERMINAL // TYPE "help"</span><span class="term-close" id="term-close">✕</span></div>
+  <div id="term-log"></div>
+  <div class="term-input-row"><span>&gt;</span><input id="term-input" type="text" autocomplete="off" spellcheck="false" aria-label="Terminal command input"></div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-close" id="modal-close">✕</div>
+    <div class="m-tag" id="modal-tag">// FILE</div>
+    <div class="m-title" id="modal-title">TITLE</div>
+    <div class="m-text" id="modal-text">Text</div>
+  </div>
+</div>
+
+</div><!-- /#site -->
+
+<script>
+/* ==================================================================
+   EDIT-ME ZONE — swap this content with real memories about Swarit
+   ================================================================== */
+const CRATES = [
+  {year:'YEAR 01', tag:'ORIGIN', title:'FIRST CONTACT', text:'Unit powered on for the first time. Immediately caused chaos in the vicinity. Engineers were not consulted, nor were they warned.'},
+  {year:'YEAR 02', tag:'INCIDENT', title:'THE ROAST FILES', text:'Logged a record number of jokes at other units\' expense. Zero apologies filed. Efficiency remained suspiciously high.'},
+  {year:'YEAR 03', tag:'UPGRADE', title:'LOYALTY PATCH', text:'A core update shipped quietly: shows up when it matters, no patch notes needed, no fanfare required.'},
+  {year:'YEAR 04', tag:'STRESS TEST', title:'RAN THE LINE', text:'Survived deadlines, chaos, and at least one questionable 3am decision. Integrity held at 100%.'},
+  {year:'YEAR 05', tag:'CLASSIFIED', title:'THE VAULT YEAR', text:'Details sealed by order of the facility. What we can confirm: it was legendary, and slightly illegal to speak of out loud.'},
+  {year:'YEAR 06', tag:'CURRENT', title:'STILL RUNNING', text:'Engine hot, humor hotter, no signs of slowing down. Recommend continued operation indefinitely.'}
+];
+
+const ATTRIBUTES = [
+  {label:'CREATIVITY', value:92},
+  {label:'LOYALTY', value:99},
+  {label:'HUMOR', value:88},
+  {label:'PATIENCE', value:41},
+  {label:'CHAOS LEVEL', value:79},
+  {label:'GAMING SKILL', value:95},
+  {label:'BAKCHODI', value:100, display:'1000/100'},
+  {label:'PROBLEM SOLVING', value:90}
+];
+
+const LOCKERS = [
+  {tag:'FILE 001', title:'THE INCIDENT', text:'Some things are better left welded shut. This is one of them. Ask him directly, at your own risk.'},
+  {tag:'FILE 002', title:'BEST BACKUP', text:'The one call that always gets picked up, day or night, no questions asked, no invoice sent.'},
+  {tag:'FILE 003', title:'RUNNING GAG', text:'A joke from years ago that still gets deployed on schedule, whether the room wants it or not.'},
+  {tag:'FILE 004', title:'PROVEN LOYALTY', text:'Shown up more times than the manual required, and never once logged it as overtime.'},
+  {tag:'FILE 005', title:'FIELD LEGEND', text:'A story that gets bigger every time it\'s told. The facts are optional. The legend is not.'},
+  {tag:'FILE 006', title:'FUTURE SPEC', text:'Whatever\'s coming next, this unit is already over-engineered to handle it.'}
+];
+
+/* Set Swarit's actual birthday below (Month Day, Year) or leave placeholder */
+const BIRTH_DATE = "JULY 24";
+document.getElementById('spec-date').textContent = BIRTH_DATE || '[ SET BIRTH DATE ]';
+
+/* ================= AUDIO ENGINE (synthesized, no external files) ================= */
+let actx = null;
+function initAudio(){
+  if(actx) return;
+  actx = new (window.AudioContext||window.webkitAudioContext)();
+}
+function hum(){
+  if(!actx) return;
+  const osc = actx.createOscillator();
+  const osc2 = actx.createOscillator();
+  const gain = actx.createGain();
+  osc.type='sawtooth'; osc.frequency.value=42;
+  osc2.type='sine'; osc2.frequency.value=63;
+  gain.gain.value=0.0001;
+  osc.connect(gain); osc2.connect(gain); gain.connect(actx.destination);
+  osc.start(); osc2.start();
+  gain.gain.exponentialRampToValueAtTime(0.028, actx.currentTime+2);
+}
+function clunk(){
+  if(!actx) return;
+  const bufferSize = actx.sampleRate*0.15;
+  const buffer = actx.createBuffer(1,bufferSize,actx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<bufferSize;i++){ data[i]=(Math.random()*2-1)*Math.pow(1-i/bufferSize,3); }
+  const noise = actx.createBufferSource(); noise.buffer=buffer;
+  const filt = actx.createBiquadFilter(); filt.type='lowpass'; filt.frequency.value=400;
+  const gain = actx.createGain(); gain.gain.value=0.5;
+  noise.connect(filt); filt.connect(gain); gain.connect(actx.destination);
+  noise.start();
+  const osc=actx.createOscillator(); osc.type='square'; osc.frequency.value=70;
+  const og=actx.createGain(); og.gain.value=0.15;
+  osc.connect(og); og.connect(actx.destination);
+  og.gain.exponentialRampToValueAtTime(0.0001,actx.currentTime+.12);
+  osc.start(); osc.stop(actx.currentTime+.12);
+}
+function steam(){
+  if(!actx) return;
+  const bufferSize = actx.sampleRate*0.4;
+  const buffer = actx.createBuffer(1,bufferSize,actx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for(let i=0;i<bufferSize;i++){ data[i]=(Math.random()*2-1)*Math.pow(1-i/bufferSize,1.5); }
+  const noise = actx.createBufferSource(); noise.buffer=buffer;
+  const filt = actx.createBiquadFilter(); filt.type='highpass'; filt.frequency.value=1800;
+  const gain = actx.createGain(); gain.gain.value=0.12;
+  noise.connect(filt); filt.connect(gain); gain.connect(actx.destination);
+  noise.start();
+}
+function blip(freq=440){
+  if(!actx) return;
+  const osc=actx.createOscillator(); osc.type='square'; osc.frequency.value=freq;
+  const g=actx.createGain(); g.gain.value=0.06;
+  osc.connect(g); g.connect(actx.destination);
+  g.gain.exponentialRampToValueAtTime(0.0001,actx.currentTime+.08);
+  osc.start(); osc.stop(actx.currentTime+.08);
+}
+function siren(){
+  if(!actx) return;
+  const osc=actx.createOscillator(); osc.type='sawtooth';
+  const g=actx.createGain(); g.gain.value=0.05;
+  osc.connect(g); g.connect(actx.destination);
+  const t=actx.currentTime;
+  osc.frequency.setValueAtTime(440,t);
+  osc.frequency.linearRampToValueAtTime(880,t+.4);
+  osc.frequency.linearRampToValueAtTime(440,t+.8);
+  osc.start(); osc.stop(t+1.6);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+1.6);
+}
+
+/* ================= BOOT SEQUENCE ================= */
+const HAS_GSAP = (typeof gsap !== 'undefined');
+const HAS_SCROLLTRIGGER = HAS_GSAP && (typeof ScrollTrigger !== 'undefined');
+
+document.getElementById('power-btn').addEventListener('click', ()=>{
+  initAudio(); hum(); clunk();
+  const boot=document.getElementById('boot');
+  const seq=document.getElementById('boot-sequence');
+
+  if(HAS_GSAP){
+    gsap.to(boot,{opacity:0,duration:.4,onComplete:()=>{boot.style.display='none';}});
+  } else {
+    boot.style.transition='opacity .4s';
+    requestAnimationFrame(()=>{ boot.style.opacity='0'; });
+    setTimeout(()=>{ boot.style.display='none'; },400);
+  }
+
+  seq.style.display='flex';
+  const lines = seq.querySelectorAll('div');
+  runBootLines(Array.from(lines), 0, runDoors);
+});
+
+/* Laggy, stuttering CRT-terminal reveal for each boot line */
+function runBootLines(lines, idx, onDone){
+  if(idx >= lines.length){
+    setTimeout(onDone, 900 + Math.random()*400);
+    return;
+  }
+  const line = lines[idx];
+  const preLag = 350 + Math.random()*500; // the machine "thinks" before the line prints
+  setTimeout(()=>{
+    flickerLine(line, ()=>{ runBootLines(lines, idx+1, onDone); });
+  }, preLag);
+}
+function flickerLine(line, cb){
+  const flickers = 3 + Math.floor(Math.random()*3); // 3-5 stutters per line
+  let i = 0;
+  line.style.transition = 'none';
+  function step(){
+    if(i >= flickers){
+      line.style.opacity = '1';
+      cb && cb();
+      return;
+    }
+    line.style.opacity = (i % 2 === 0) ? String(0.1 + Math.random()*0.35) : '0.85';
+    blip(160 + Math.random()*140);
+    i++;
+    setTimeout(step, 70 + Math.random()*140);
+  }
+  step();
+}
+
+function runDoors(){
+  steam();
+  const seq=document.getElementById('boot-sequence');
+  const doors=document.getElementById('doors');
+
+  if(HAS_GSAP){
+    gsap.to(seq,{opacity:0,duration:.4,delay:.6,onComplete:()=>{seq.style.display='none';}});
+  } else {
+    setTimeout(()=>{
+      seq.style.transition='opacity .4s'; seq.style.opacity='0';
+      setTimeout(()=>{ seq.style.display='none'; },400);
+    },600);
+  }
+
+  doors.style.display='block';
+
+  if(HAS_GSAP){
+    gsap.timeline({delay:1})
+      .to('.door.left',{xPercent:-100,duration:1.4,ease:'power3.inOut'})
+      .to('.door.right',{xPercent:100,duration:1.4,ease:'power3.inOut'},'<')
+      .call(()=>{ steam(); })
+      .call(()=>{
+        doors.style.display='none';
+        document.getElementById('site').style.display='block';
+        revealHome();
+      },null,'+=0.1');
+  } else {
+    setTimeout(()=>{
+      document.querySelector('.door.left').style.transition='transform 1.4s ease-in-out';
+      document.querySelector('.door.right').style.transition='transform 1.4s ease-in-out';
+      document.querySelector('.door.left').style.transform='translateX(-100%)';
+      document.querySelector('.door.right').style.transform='translateX(100%)';
+      steam();
+      setTimeout(()=>{
+        doors.style.display='none';
+        document.getElementById('site').style.display='block';
+        revealHome();
+      },1500);
+    },1000);
+  }
+}
+
+function revealHome(){
+  if(HAS_GSAP){
+    gsap.fromTo('#main-title',{opacity:0,y:40,letterSpacing:'10px'},{opacity:1,y:0,letterSpacing:'2px',duration:1.2,ease:'power3.out'});
+    gsap.fromTo('.eyebrow,.subtitle,.desc,.scroll-cue',{opacity:0,y:16},{opacity:1,y:0,duration:.8,stagger:.12,delay:.4});
+  } else {
+    document.querySelectorAll('#main-title,.eyebrow,.subtitle,.desc,.scroll-cue').forEach(el=>{
+      el.style.transition='opacity .8s, transform .8s';
+      el.style.opacity='1'; el.style.transform='none';
+    });
+  }
+  sparkFlicker();
+  buildCrates(); buildGauges(); buildLockers();
+  if(HAS_SCROLLTRIGGER) animateOnScroll();
+}
+
+function sparkFlicker(){
+  const title=document.getElementById('main-title');
+  setInterval(()=>{
+    if(Math.random()<0.35 && actx){
+      const rect=title.getBoundingClientRect();
+      spawnSpark(rect.left+Math.random()*rect.width, rect.top+Math.random()*rect.height);
+    }
+  },1400);
+}
+function spawnSpark(x,y){
+  const s=document.createElement('div');
+  s.className='spark';
+  s.style.left=x+'px'; s.style.top=y+'px';
+  document.body.appendChild(s);
+  if(HAS_GSAP){
+    gsap.to(s,{
+      x:(Math.random()-0.5)*60, y:(Math.random()-0.5)*60+20, opacity:0, duration:.5+Math.random()*.4,
+      onComplete:()=>s.remove()
+    });
+  } else {
+    s.style.transition='transform .6s ease-out, opacity .6s ease-out';
+    requestAnimationFrame(()=>{
+      s.style.transform=`translate(${(Math.random()-0.5)*60}px, ${(Math.random()-0.5)*60+20}px)`;
+      s.style.opacity='0';
+    });
+    setTimeout(()=>s.remove(),600);
+  }
+}
+
+/* ================= NAV / LEVERS ================= */
+const levers = document.querySelectorAll('.lever');
+levers.forEach(lev=>{
+  lev.addEventListener('click', ()=>{
+    if(lev.classList.contains('active')) return;
+    initAudio(); clunk();
+    levers.forEach(l=>l.classList.remove('active'));
+    lev.classList.add('active');
+    switchSection(lev.dataset.target);
+  });
+});
+function resetSectionScroll(){
+  window.scrollTo({top:0,left:0,behavior:'instant'});
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  const crateRow = document.getElementById('crate-row');
+  if(crateRow) crateRow.scrollLeft = 0;
+}
+
+function switchSection(id){
+  const current = document.querySelector('.section.visible');
+  const next = document.getElementById(id);
+  const main = document.querySelector('main');
+
+  if(HAS_GSAP){
+    gsap.timeline()
+      .to(main,{x:-6,duration:.06})
+      .to(main,{x:6,duration:.06})
+      .to(main,{x:-3,duration:.06})
+      .to(main,{x:0,duration:.06})
+      .to(current,{opacity:0,duration:.2,onComplete:()=>{
+        current.classList.remove('visible');
+        next.classList.add('visible');
+        resetSectionScroll();
+        gsap.fromTo(next,{opacity:0},{opacity:1,duration:.35});
+        resetSectionScroll();
+      }},0);
+  } else {
+    current.style.transition='opacity .2s';
+    current.style.opacity='0';
+    setTimeout(()=>{
+      current.classList.remove('visible');
+      current.style.opacity='';
+      next.classList.add('visible');
+      resetSectionScroll();
+      next.style.opacity='0';
+      next.style.transition='opacity .35s';
+      requestAnimationFrame(()=>{ next.style.opacity='1'; resetSectionScroll(); });
+    },200);
+  }
+}
+
+/* ================= TIMELINE CRATES ================= */
+function buildCrates(){
+  const row=document.getElementById('crate-row');
+  CRATES.forEach((c,i)=>{
+    const el=document.createElement('div');
+    el.className='crate';
+    el.innerHTML=`
+      <div class="bolt tl"></div><div class="bolt tr"></div><div class="bolt bl"></div><div class="bolt br"></div>
+      <div><div class="crate-year">${c.year}</div><div class="crate-tag">${c.tag}</div></div>
+      <div class="crate-title">${c.title}</div>
+      <div class="crate-open">[ CLICK TO OPEN ]</div>
+    `;
+    el.addEventListener('click', ()=>{ initAudio(); clunk(); openModal(c.tag, c.title, c.text); });
+    row.appendChild(el);
+  });
+}
+
+/* ================= ARSENAL GAUGES ================= */
+function buildGauges(){
+  const grid=document.getElementById('gauge-grid');
+  ATTRIBUTES.forEach(a=>{
+    const angle = -120 + (a.value/100)*240;
+    const card=document.createElement('div');
+    card.className='gauge-card';
+    card.innerHTML=`
+      <svg class="gauge-svg" viewBox="0 0 140 140">
+        <circle cx="70" cy="70" r="58" fill="none" stroke="#3a3e40" stroke-width="6"/>
+        <path d="M 22 100 A 58 58 0 1 1 118 100" fill="none" stroke="#151617" stroke-width="10"/>
+        <path class="gauge-arc" d="M 22 100 A 58 58 0 1 1 118 100" fill="none" stroke="#b5502e" stroke-width="10"
+          stroke-dasharray="${(a.value/100)*258} 258" stroke-linecap="butt"/>
+        <line x1="70" y1="70" x2="70" y2="24" stroke="#d9a520" stroke-width="3" class="gauge-needle"
+          transform="rotate(${angle} 70 70)"/>
+        <circle cx="70" cy="70" r="6" fill="#d9a520"/>
+      </svg>
+      <div class="gauge-name">${a.label}</div>
+      <div class="gauge-value">${a.display ? a.display : a.value + ' / 100'}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+/* ================= MEMORY LOCKERS ================= */
+function buildLockers(){
+  const grid=document.getElementById('locker-grid');
+  LOCKERS.forEach((m,i)=>{
+    const el=document.createElement('div');
+    el.className='locker';
+    el.innerHTML=`
+      <div class="locker-content">
+        <div class="lc-tag">${m.tag}</div>
+        <div class="lc-title">${m.title}</div>
+        <div class="lc-text" data-full="${m.text}"></div>
+      </div>
+      <div class="locker-face">
+        <div class="lock-dial"></div>
+        <div class="locker-id">SECURE LOCKER</div>
+        <div class="locker-num">${String(i+1).padStart(2,'0')}</div>
+      </div>
+    `;
+    el.addEventListener('click', ()=>{
+      if(el.classList.contains('open')) return;
+      initAudio(); clunk(); setTimeout(steam,250);
+      el.classList.add('open');
+      const textEl = el.querySelector('.lc-text');
+      typewrite(textEl, m.text);
+    });
+    grid.appendChild(el);
+  });
+}
+function typewrite(el, text){
+  let i=0; el.textContent='';
+  const iv=setInterval(()=>{
+    el.textContent += text[i]; i++;
+    if(i>=text.length) clearInterval(iv);
+  },18);
+}
+
+/* ================= MODAL ================= */
+const overlay=document.getElementById('modal-overlay');
+function openModal(tag,title,text){
+  document.getElementById('modal-tag').textContent='// '+tag;
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-text').textContent=text;
+  overlay.classList.add('open');
+}
+document.getElementById('modal-close').addEventListener('click', ()=>overlay.classList.remove('open'));
+overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.classList.remove('open'); });
+
+/* ================= SCROLL ANIMATIONS ================= */
+function animateOnScroll(){
+  gsap.utils.toArray('.gauge-card, .locker, .crate').forEach(el=>{
+    gsap.fromTo(el,{opacity:0,y:24},{opacity:1,y:0,duration:.6,ease:'power2.out',
+      scrollTrigger:{trigger:el, start:'top 92%'}});
+  });
+}
+
+/* ================= CUSTOM CURSOR + SPARKS ================= */
+document.addEventListener('mousemove', e=>{
+  const torch=document.getElementById('torch');
+  torch.style.transform=`translate(${e.clientX-4}px, ${e.clientY-30}px)`;
+});
+document.addEventListener('mouseover', e=>{
+  if(e.target.closest('.lever, .crate, .locker, button, a, .gauge-card')){
+    const rect = e.target.getBoundingClientRect();
+    spawnSpark(rect.left+rect.width/2, rect.top+rect.height/2);
+  }
+});
+
+/* ================= TERMINAL ================= */
+const termToggle=document.getElementById('term-toggle');
+const theTerminal=document.getElementById('the-terminal');
+const termLog=document.getElementById('term-log');
+const termInput=document.getElementById('term-input');
+termToggle.addEventListener('click', ()=>{
+  initAudio(); blip(600);
+  theTerminal.classList.toggle('open');
+  if(theTerminal.classList.contains('open')){
+    termInput.focus();
+    if(!termLog.hasChildNodes()) printTerm('SECURE TERMINAL ONLINE. Type "help" for commands.', 'resp');
+  }
+});
+document.getElementById('term-close').addEventListener('click', ()=>theTerminal.classList.remove('open'));
+
+const TERM_RESPONSES = {
+  help: `AVAILABLE COMMANDS:
+  help | birthday | status | unlock | cake | engine | swarit | surprise`,
+  birthday: 'LOG ENTRY: one (1) legendary unit rolled off the line on this date. Facility morale: irreversibly improved.',
+  status: 'STATUS REPORT: engine hot, humor hotter, loyalty at max tolerance, patience... reading LOW. All nominal.',
+  unlock: `UNLOCK SEQUENCE ACCEPTED. VAULT DOOR 7 OPENING...
+>> ACCESS GRANTED: you found the easter egg. Nothing back here but respect.`,
+  cake: 'ERROR 451: CAKE MODULE NOT INSTALLED ON THIS TERMINAL. Please proceed to the nearest kitchen for manual deployment.',
+  engine: 'ENGINE DIAGNOSTIC: running since day one, zero scheduled maintenance, still outperforming every unit built after it.',
+  swarit: 'DESIGNATION CONFIRMED: SWARIT. Classification: irreplaceable. Do not attempt to reproduce this unit.',
+  surprise: `SURPRISE PROTOCOL ARMED.
+>> Confetti subroutine not found. Substituting with: we're very glad you exist. Happy birthday.`
+};
+termInput.addEventListener('keydown', e=>{
+  if(e.key!=='Enter') return;
+  const raw = termInput.value.trim();
+  const cmd = raw.toLowerCase();
+  if(!raw) return;
+  printTerm(raw,'cmd-line',true);
+  termInput.value='';
+  initAudio(); blip(500);
+  if(cmd==='factory reset'){
+    printTerm('ERROR: SWARIT CANNOT BE REPLACED.','err');
+  } else if(TERM_RESPONSES[cmd]){
+    printTerm(TERM_RESPONSES[cmd],'resp');
+  } else {
+    printTerm('UNKNOWN COMMAND: "'+raw+'". Type "help" for a list of valid commands.','err');
+  }
+});
+function printTerm(text,cls,isCmd){
+  const line=document.createElement('div');
+  line.className=cls;
+  line.textContent = isCmd ? ('> '+text) : text;
+  termLog.appendChild(line);
+  termLog.scrollTop = termLog.scrollHeight;
+}
+
+/* ================= EASTER EGGS ================= */
+// Konami code -> overdrive mode
+const KONAMI = ['ArrowUp','ArrowUp','ArrowDown','ArrowDown','ArrowLeft','ArrowRight','ArrowLeft','ArrowRight','b','a'];
+let konamiPos=0;
+document.addEventListener('keydown', e=>{
+  const key = e.key;
+  if(key === KONAMI[konamiPos]){
+    konamiPos++;
+    if(konamiPos===KONAMI.length){
+      konamiPos=0;
+      triggerOverdrive();
+    }
+  } else {
+    konamiPos = (key===KONAMI[0]) ? 1 : 0;
+  }
+});
+function triggerOverdrive(){
+  initAudio(); siren();
+  document.body.classList.add('overdrive');
+  showToast('>>> OVERDRIVE MODE ENGAGED <<<');
+  setTimeout(()=>document.body.classList.remove('overdrive'), 4000);
+}
+
+// Rapid-click brand/logo -> sirens
+let logoClicks=0, logoTimer=null;
+document.querySelector('#control-panel .brand').style.cursor='none';
+document.querySelector('#control-panel .brand').addEventListener('click', ()=>{
+  logoClicks++;
+  clearTimeout(logoTimer);
+  logoTimer=setTimeout(()=>logoClicks=0, 3000);
+  if(logoClicks>=5){
+    logoClicks=0;
+    initAudio(); siren();
+    const overlay=document.getElementById('siren-overlay');
+    overlay.classList.add('active');
+    showToast('!! EMERGENCY ALARM TRIPPED !!');
+    setTimeout(()=>overlay.classList.remove('active'),3000);
+  }
+});
+
+// Double-click title -> gears max speed (visual pulse since no gear svg present, use flicker+scale)
+document.getElementById('main-title').addEventListener('dblclick', ()=>{
+  initAudio(); blip(300); blip(340);
+  if(HAS_GSAP){
+    gsap.fromTo('#main-title',{scale:1},{scale:1.03,duration:.15,yoyo:true,repeat:5,ease:'power1.inOut'});
+  } else {
+    const el=document.getElementById('main-title');
+    el.style.transition='transform .15s ease-in-out';
+    let n=0;
+    const iv=setInterval(()=>{
+      el.style.transform = (n%2===0) ? 'scale(1.03)' : 'scale(1)';
+      n++;
+      if(n>6){ clearInterval(iv); el.style.transform='none'; }
+    },150);
+  }
+  showToast('>>> GEARS AT MAXIMUM SPEED <<<');
+});
+
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  if(HAS_GSAP){
+    gsap.killTweensOf(t);
+    gsap.timeline()
+      .to(t,{opacity:1,y:6,duration:.25})
+      .to(t,{opacity:0,duration:.4,delay:2});
+  } else {
+    t.style.transition='opacity .25s, transform .25s';
+    t.style.opacity='1'; t.style.transform='translate(-50%,6px)';
+    setTimeout(()=>{
+      t.style.transition='opacity .4s';
+      t.style.opacity='0';
+    },2250);
+  }
+}
+</script>
+</body>
+</html>

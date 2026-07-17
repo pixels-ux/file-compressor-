@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scholar's Quest — Feedback Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #C8102E;
+    --purple-light: #E8304A;
+    --bg: #F4F4F4;
+    --card: #FFFFFF;
+    --text: #1A1A1A;
+    --muted: #888888;
+    --accent-rgb: 200,16,46;
+    --green: #28A062;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px 20px;
+  }
+  .app { max-width: 980px; margin: 0 auto; }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--card); border: 1px solid rgba(var(--accent-rgb),0.15);
+    border-radius: 18px; padding: 22px 28px; margin-bottom: 24px;
+    box-shadow: 0 2px 16px rgba(var(--accent-rgb),0.06);
+    flex-wrap: wrap; gap: 12px;
+  }
+  h1 { font-family: 'Cinzel', serif; font-size: 22px; color: var(--red); letter-spacing: 1px; }
+  header p { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .btn {
+    padding: 9px 16px; border-radius: 10px; border: none; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+    background: var(--red); color: #fff; transition: all 0.2s;
+  }
+  .btn:hover { background: var(--purple-light); }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+  .stat-card {
+    background: var(--card); border: 1px solid rgba(var(--accent-rgb),0.1);
+    border-radius: 14px; padding: 16px; text-align: center;
+  }
+  .stat-num { font-size: 26px; font-weight: 600; color: var(--red); font-family: 'Cinzel', serif; }
+  .stat-lbl { font-size: 11.5px; color: var(--muted); margin-top: 4px; }
+
+  .filters { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  select, input[type="text"] {
+    background: var(--card); border: 1px solid rgba(var(--accent-rgb),0.15);
+    border-radius: 10px; padding: 9px 12px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--text); outline: none;
+  }
+  select:focus, input:focus { border-color: var(--red); }
+  input[type="text"] { flex: 1; min-width: 180px; }
+
+  .entry {
+    background: var(--card); border: 1px solid rgba(var(--accent-rgb),0.1);
+    border-radius: 14px; padding: 18px 20px; margin-bottom: 12px;
+    box-shadow: 0 1px 6px rgba(var(--accent-rgb),0.04);
+  }
+  .entry-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .entry-who { font-weight: 600; font-size: 14px; }
+  .entry-who span { font-weight: 400; color: var(--muted); font-size: 12.5px; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px;
+    border-radius: 100px; background: rgba(var(--accent-rgb),0.1); color: var(--red);
+    text-transform: capitalize;
+  }
+  .stars-display { color: var(--red); font-size: 14px; letter-spacing: 1px; }
+  .entry-msg { margin-top: 10px; font-size: 14px; line-height: 1.5; color: var(--text); }
+  .entry-date { margin-top: 8px; font-size: 11.5px; color: var(--muted); }
+
+  .empty, .loading, .config-warning {
+    text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px;
+  }
+  .config-warning {
+    background: #FFF5F5; border: 1px solid rgba(200,16,46,0.3); border-radius: 12px;
+    color: #8B0000; text-align: left; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Feedback Dashboard</h1>
+      <p id="header-sub">Loading submissions…</p>
+    </div>
+    <button class="btn" onclick="loadFeedback()">↻ Refresh</button>
+  </header>
+
+  <div id="config-warning" class="config-warning" style="display:none;">
+    ⚠️ This dashboard isn't connected to a database yet. Open this file and set <code>SUPABASE_URL</code> and <code>SUPABASE_KEY</code> near the top of the script — use the same values as feedback.html.
+  </div>
+
+  <div id="stats" class="stats" style="display:none;">
+    <div class="stat-card"><div class="stat-num" id="stat-total">0</div><div class="stat-lbl">Total responses</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-avg">–</div><div class="stat-lbl">Avg rating</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-bugs">0</div><div class="stat-lbl">Bug reports</div></div>
+    <div class="stat-card"><div class="stat-num" id="stat-features">0</div><div class="stat-lbl">Feature requests</div></div>
+  </div>
+
+  <div class="filters" id="filters" style="display:none;">
+    <select id="filter-category">
+      <option value="">All categories</option>
+      <option value="general">General feedback</option>
+      <option value="bug">Bug report</option>
+      <option value="feature">Feature request</option>
+      <option value="praise">Something I love</option>
+    </select>
+    <input type="text" id="filter-search" placeholder="Search messages...">
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<script>
+  // ── CONFIGURE THESE TWO VALUES (same as feedback.html) ─────
+  const SUPABASE_URL = 'https://hqdcscalfnsiocukobut.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_joFIkOco3LyD1c04HJ8_aQ_hSN5Uo81';
+  // ─────────────────────────────────────────────────────────────
+
+  let allFeedback = [];
+
+  async function loadFeedback() {
+    const list = document.getElementById('list');
+    const sub = document.getElementById('header-sub');
+
+    if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || SUPABASE_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+      document.getElementById('config-warning').style.display = 'block';
+      sub.textContent = 'Not connected';
+      return;
+    }
+
+    list.innerHTML = '<div class="loading">Loading submissions…</div>';
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/feedback?select=*&order=created_at.desc`, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
+      if (!res.ok) throw new Error(await res.text());
+      allFeedback = await res.json();
+      sub.textContent = `${allFeedback.length} submission${allFeedback.length === 1 ? '' : 's'}`;
+      document.getElementById('stats').style.display = 'grid';
+      document.getElementById('filters').style.display = 'flex';
+      renderStats();
+      renderList();
+    } catch (err) {
+      console.error(err);
+      list.innerHTML = '<div class="empty">Couldn\'t load feedback. Check your Supabase URL/key and that the "feedback" table exists.</div>';
+      sub.textContent = 'Error loading data';
+    }
+  }
+
+  function renderStats() {
+    const total = allFeedback.length;
+    const rated = allFeedback.filter(f => f.rating);
+    const avg = rated.length ? (rated.reduce((s, f) => s + f.rating, 0) / rated.length).toFixed(1) : '–';
+    const bugs = allFeedback.filter(f => f.category === 'bug').length;
+    const features = allFeedback.filter(f => f.category === 'feature').length;
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-avg').textContent = avg;
+    document.getElementById('stat-bugs').textContent = bugs;
+    document.getElementById('stat-features').textContent = features;
+  }
+
+  function renderList() {
+    const cat = document.getElementById('filter-category').value;
+    const search = document.getElementById('filter-search').value.toLowerCase();
+    const list = document.getElementById('list');
+
+    let filtered = allFeedback;
+    if (cat) filtered = filtered.filter(f => f.category === cat);
+    if (search) filtered = filtered.filter(f => (f.message || '').toLowerCase().includes(search));
+
+    if (!filtered.length) {
+      list.innerHTML = '<div class="empty">No feedback matches your filters yet.</div>';
+      return;
+    }
+
+    list.innerHTML = filtered.map(f => `
+      <div class="entry">
+        <div class="entry-top">
+          <div class="entry-who">${escapeHtml(f.name || 'Anonymous')} <span>${escapeHtml(f.email || '')}</span></div>
+          <span class="badge">${escapeHtml(f.category || 'general')}</span>
+        </div>
+        ${f.rating ? `<div class="stars-display">${'★'.repeat(f.rating)}${'☆'.repeat(5 - f.rating)}</div>` : ''}
+        <div class="entry-msg">${escapeHtml(f.message || '')}</div>
+        <div class="entry-date">${f.created_at ? new Date(f.created_at).toLocaleString() : ''}</div>
+      </div>
+    `).join('');
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  document.getElementById('filter-category').addEventListener('change', renderList);
+  document.getElementById('filter-search').addEventListener('input', renderList);
+
+  loadFeedback();
+</script>
+</body>
+</html>

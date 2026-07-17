@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scholar's Quest — Feedback</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #C8102E;
+    --gold-dark: #8B0000;
+    --purple-light: #E8304A;
+    --bg: #F4F4F4;
+    --card: #FFFFFF;
+    --input-bg: #FAFAFA;
+    --text: #1A1A1A;
+    --muted: #888888;
+    --accent-rgb: 200,16,46;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .wrap { width: 100%; max-width: 520px; }
+  .brand { text-align: center; margin-bottom: 22px; }
+  .brand h1 {
+    font-family: 'Cinzel', serif; font-size: 26px; color: var(--red);
+    letter-spacing: 1px;
+  }
+  .brand p { font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .card {
+    background: var(--card);
+    border: 1px solid rgba(var(--accent-rgb),0.15);
+    border-radius: 18px;
+    padding: 28px;
+    box-shadow: 0 4px 24px rgba(var(--accent-rgb),0.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+  }
+  label {
+    display: block; font-size: 13px; font-weight: 600; color: var(--text);
+    margin-bottom: 6px; margin-top: 18px;
+  }
+  label:first-of-type { margin-top: 0; }
+  input, select, textarea {
+    width: 100%; background: var(--input-bg);
+    border: 1px solid rgba(var(--accent-rgb),0.18); border-radius: 10px;
+    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px;
+    padding: 11px 14px; outline: none; transition: border 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--red); }
+  textarea { resize: vertical; min-height: 100px; }
+  .stars { display: flex; gap: 6px; margin-top: 4px; }
+  .star {
+    font-size: 26px; cursor: pointer; color: #DDD; transition: color 0.15s, transform 0.15s;
+    user-select: none;
+  }
+  .star.active, .star:hover { color: var(--red); transform: scale(1.1); }
+  .btn {
+    width: 100%; margin-top: 24px;
+    padding: 13px 20px; border-radius: 10px; border: none; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+    background: var(--red); color: #fff; transition: all 0.2s;
+  }
+  .btn:hover { background: var(--purple-light); transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .msg {
+    margin-top: 16px; padding: 12px 14px; border-radius: 10px;
+    font-size: 13px; display: none;
+  }
+  .msg.success { display: block; background: rgba(40,160,98,0.12); color: #1A7A4A; }
+  .msg.error { display: block; background: rgba(200,16,46,0.1); color: var(--red); }
+  .config-warning {
+    background: #FFF5F5; border: 1px solid rgba(200,16,46,0.3); border-radius: 10px;
+    padding: 14px; font-size: 12.5px; color: var(--gold-dark); margin-bottom: 18px; line-height: 1.5;
+  }
+  .thanks-panel {
+    text-align: center; padding: 20px 10px 6px;
+    animation: thanksIn 0.4s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes thanksIn {
+    from { opacity: 0; transform: translateY(6px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .thanks-icon {
+    width: 52px; height: 52px; margin: 0 auto 14px;
+    border-radius: 50%; background: rgba(40,160,98,0.12); color: #1A7A4A;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; font-weight: 700;
+  }
+  .thanks-title { font-family: 'Cinzel', serif; font-size: 18px; color: var(--text); margin-bottom: 6px; }
+  .thanks-sub { font-size: 13.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <h1>Scholar's Quest</h1>
+    <p>We'd love your feedback</p>
+  </div>
+
+  <div class="card">
+    <div id="config-warning" class="config-warning" style="display:none;">
+      ⚠️ This form isn't connected to a database yet. Open this file and set <code>SUPABASE_URL</code> and <code>SUPABASE_KEY</code> near the top of the script.
+    </div>
+
+    <form id="feedback-form">
+      <div id="form-fields">
+        <label for="name">Name (optional)</label>
+        <input type="text" id="name" placeholder="Your name">
+
+        <label for="email">Email (optional)</label>
+        <input type="email" id="email" placeholder="you@example.com">
+
+        <label for="category">What's this about?</label>
+        <select id="category">
+          <option value="general">General feedback</option>
+          <option value="bug">Bug report</option>
+          <option value="feature">Feature request</option>
+          <option value="praise">Something I love</option>
+        </select>
+
+        <label>Overall rating</label>
+        <div class="stars" id="stars">
+          <span class="star" data-val="1">★</span>
+          <span class="star" data-val="2">★</span>
+          <span class="star" data-val="3">★</span>
+          <span class="star" data-val="4">★</span>
+          <span class="star" data-val="5">★</span>
+        </div>
+
+        <label for="message">Your feedback</label>
+        <textarea id="message" placeholder="Tell us what's on your mind..." required></textarea>
+
+        <button type="submit" class="btn" id="submit-btn">Send feedback</button>
+      </div>
+      <div class="msg" id="msg"></div>
+      <div id="thanks-panel" class="thanks-panel" style="display:none;">
+        <div class="thanks-icon">✓</div>
+        <p class="thanks-title">Thanks for the feedback!</p>
+        <p class="thanks-sub">You can close this window now.</p>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // ── CONFIGURE THESE TWO VALUES ──────────────────────────────
+  // Get them from your Supabase project: Settings -> API
+  const SUPABASE_URL = 'https://hqdcscalfnsiocukobut.supabase.co';        // e.g. https://xxxxx.supabase.co
+  const SUPABASE_KEY = 'sb_publishable_joFIkOco3LyD1c04HJ8_aQ_hSN5Uo81';   // the "anon public" key
+
+  // Paste the Google Apps Script "Web app" URL here (ends in /exec).
+  // Leave as-is to skip Google Sheet syncing.
+  const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbykZN1v4H3gQy0R0vLZB678nvTnpfHD86WDq8qQlisseyj4hG8QloNc4fn-95j_saFk/exec';
+  // ─────────────────────────────────────────────────────────────
+
+  if (SUPABASE_URL === 'YOUR_SUPABASE_URL' || SUPABASE_KEY === 'YOUR_SUPABASE_ANON_KEY') {
+    document.getElementById('config-warning').style.display = 'block';
+  }
+
+  let rating = 0;
+  const starEls = document.querySelectorAll('.star');
+  starEls.forEach(star => {
+    star.addEventListener('click', () => {
+      rating = parseInt(star.getAttribute('data-val'));
+      starEls.forEach(s => {
+        s.classList.toggle('active', parseInt(s.getAttribute('data-val')) <= rating);
+      });
+    });
+  });
+
+  const form = document.getElementById('feedback-form');
+  const msg = document.getElementById('msg');
+  const submitBtn = document.getElementById('submit-btn');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    msg.className = 'msg';
+    msg.style.display = 'none';
+
+    const payload = {
+      name: document.getElementById('name').value || null,
+      email: document.getElementById('email').value || null,
+      category: document.getElementById('category').value,
+      rating: rating || null,
+      message: document.getElementById('message').value,
+      created_at: new Date().toISOString()
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      // Fire-and-forget copy to Google Sheet. Apps Script doesn't return
+      // readable CORS headers, so we use no-cors and don't wait on/parse
+      // the response — Supabase above remains the source of truth for
+      // whether the submission "succeeded".
+      if (GOOGLE_SHEET_URL && GOOGLE_SHEET_URL !== 'YOUR_GOOGLE_APPS_SCRIPT_URL') {
+        fetch(GOOGLE_SHEET_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        }).catch(err => console.warn('Google Sheet sync failed:', err));
+      }
+
+      document.getElementById('form-fields').style.display = 'none';
+      document.getElementById('thanks-panel').style.display = 'block';
+      msg.style.display = 'none';
+    } catch (err) {
+      console.error(err);
+      msg.textContent = 'Something went wrong submitting your feedback. Please try again.';
+      msg.className = 'msg error';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send feedback';
+    }
+  });
+</script>
+</body>
+</html>
